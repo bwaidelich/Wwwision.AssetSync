@@ -1,0 +1,30 @@
+{
+    "description": "Neos Flow package to synchronize metadata and binary data of imported Neos.Media assets",
+    "type": "neos-package",
+    "name": "wwwision/asset-sync",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.4",
+        "neos/media": "^7.0",
+        "wwwision/batch-processing": "^1.0"
+    },
+    "require-dev": {
+        "roave/security-advisories": "dev-latest",
+        "phpunit/phpunit": "^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Wwwision\\AssetSync\\": "Classes/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Wwwision\\AssetSync\\Tests\\": "Classes"
+        }
+    },
+    "extra": {
+        "neos": {
+            "package-key": "Wwwision.AssetSync"
+        }
+    }
+}

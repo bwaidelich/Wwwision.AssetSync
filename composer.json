@@ -22,6 +22,16 @@
             "Wwwision\\AssetSync\\Tests\\": "Classes"
         }
     },
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/bwaidelich"
+        },
+        {
+            "type": "paypal",
+            "url": "https://www.paypal.me/bwaidelich"
+        }
+    ],
     "extra": {
         "neos": {
             "package-key": "Wwwision.AssetSync"

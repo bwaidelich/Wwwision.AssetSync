@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Wwwision\AssetSync;
 
 use Neos\Flow\Persistence\QueryInterface;
+use Neos\Flow\ResourceManagement\PersistentResource;
 use Neos\Flow\ResourceManagement\ResourceManager;
 use Neos\Media\Domain\Model\AssetInterface;
 use Neos\Media\Domain\Model\AssetSource\AssetProxy\AssetProxyInterface;
@@ -85,7 +86,7 @@ final class SyncService
         } catch (\Throwable $e) {
             $this->dispatch(self::EVENT_ERROR, sprintf('Failed to replace resource for imported asset "%s": %s', $importedAsset->getLocalAssetIdentifier(), $e->getMessage()));
         }
-        $this->dispatch(self::EVENT_PROGRESS, $importedAsset, $metadataWasUpdated, $resourceWasReplaced);
+        $this->dispatch(self::EVENT_PROGRESS, $importedAsset, $metadataWasUpdated ?? null, $resourceWasReplaced ?? false);
     }
 
     public function onStart(callable $handler): void
@@ -135,14 +136,28 @@ final class SyncService
         if ($localAsset instanceof ImageVariant) {
             return false;
         }
-        $resourceWasReplaced = false;
-        $assetResource = $this->resourceManager->importResource($assetProxy->getImportStream());
-        if ($assetResource->getFilename() !== $assetProxy->getFilename()) {
-            $assetResource->setFilename($assetProxy->getFilename());
-            $resourceWasReplaced = true;
+        $assetProxyStream = $assetProxy->getImportStream();
+        if (!\is_resource($assetProxyStream)) {
+            throw new \RuntimeException(sprintf('Failed to open stream for remote asset "%s" from asset source "%s"', $assetProxy->getIdentifier(), $assetProxy->getAssetSource()->getIdentifier()), 1653054583);
         }
-        $this->assetService->replaceAssetResource($localAsset, $assetResource);
-        return $resourceWasReplaced;
+        $assetProxyContents = stream_get_contents($assetProxyStream);
+        if (!\is_string($assetProxyContents)) {
+            throw new \RuntimeException(sprintf('Failed to read stream for remote asset "%s" from asset source "%s"', $assetProxy->getIdentifier(), $assetProxy->getAssetSource()->getIdentifier()), 1653054707);
+        }
+        fclose($assetProxyStream);
+        $assetProxySha1 = sha1($assetProxyContents);
+        if ($localAsset->getResource()->getSha1() === $assetProxySha1) {
+            return false;
+        }
+        $assetProxyResource = $this->resourceManager->getResourceBySha1($assetProxySha1);
+        if ($assetProxyResource === null) {
+            $assetProxyResource = $this->resourceManager->importResourceFromContent($assetProxyContents, $assetProxy->getFilename(), $localAsset->getResource()->getCollectionName());
+        }
+        if (!$assetProxyResource instanceof PersistentResource) {
+            return false;
+        }
+        $this->assetService->replaceAssetResource($localAsset, $assetProxyResource);
+        return true;
     }
 
     private function importedAssetsForPreset(Preset $preset): QueryInterface
